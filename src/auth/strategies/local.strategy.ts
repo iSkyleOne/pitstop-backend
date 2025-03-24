@@ -20,9 +20,6 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     }
 
     public async validate(req: Request, email: string, password: string): Promise<JwtTokens> {
-        console.log('LocalStrategy.validate');
-        console.log('email:', email);
-        console.log('password:', password);
         const ip = req.ip || req.connection.remoteAddress || req.socket.remoteAddress || '';
 		const userAgent = req.get('User-Agent') || '';
 		const hdi: HardwareId = this.authService.generateHdi(userAgent, ip);

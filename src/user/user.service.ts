@@ -21,11 +21,6 @@ export class UserService {
             password = MD5(payload.password).toString();
             password = await this.hashPassword(password);
         }
-
-        console.log({
-            ...payload,
-            ...(!!password && { password }),
-        });
         
         return await this.userModel.create({
             ...payload,

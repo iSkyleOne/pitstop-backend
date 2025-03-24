@@ -18,6 +18,9 @@ export class User {
     @Prop({ unique: true, required: true })
     public email: string;
 
+    @Prop()
+    public phoneNumber: string;
+
     @Prop({ default: true })
     public active: boolean = true;
 

@@ -18,7 +18,7 @@ export class AuthController {
 	@UseGuards(LocalGuard)
 	public async login(@Req() req: Request, @Res() res: Response) {
 		const token = req.user;
-		console.log(token);
+
 		res.cookie('accessToken', token?.['accessToken'], {
 			httpOnly: false,
 			secure: true,
@@ -38,7 +38,7 @@ export class AuthController {
 
 	@Post('refresh')
 	public async refresh(@Req() req: Request, @Res() res: Response) {
-		const refreshToken: string | null = req.cookies['refreshToken'];
+		const refreshToken: string | null = req.cookies?.['refreshToken'];
 		const hardwareId: HardwareId = new HardwareId({
 			ip: req.ip || req.connection.remoteAddress,
 			userAgent: req.get('User-Agent'),
@@ -67,7 +67,7 @@ export class AuthController {
 
 	@Get('user')
 	@UseGuards(JwtAuthGuard)
-	public async test(@Req() req: Request) {
+	public async getCurrentUser(@Req() req: Request) {
 		return req.user;
 	}
 

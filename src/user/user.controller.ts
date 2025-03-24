@@ -1,8 +1,9 @@
-import { Body, Controller, Get, HttpException, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpException, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { User } from "src/database/shemas/user.schema";
 import { CreateUserDto } from "./dto/user.dto";
 import { UserService } from "./user.service";
 import { JwtAuthGuard } from "src/guards/auth/jwt.guard";
+import { Request } from "express";
 
 @Controller('user')
 export class UserController {
@@ -18,6 +19,15 @@ export class UserController {
     }
 
     @Get()
+    @UseGuards(JwtAuthGuard)
+    public async getCurrentUser(@Req() req: Request): Promise<User | null> {
+        const userId = (req.user as any)?.id;
+        const user: User | null = await this.usersService.fetchById(userId);
+
+        return user;
+    }
+
+    @Get('/all')
     @UseGuards(JwtAuthGuard)
     public async fetch(): Promise<User[]> {
         return await this.usersService.fetch();
