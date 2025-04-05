@@ -71,7 +71,7 @@ export class AuthController {
 		return req.user;
 	}
 
-	@Post('logout')
+	@Get('logout')
 	@UseGuards(JwtAuthGuard)
 	public async logout(@Req() req: Request, @Res() res: Response) {
 		const hardwareId: HardwareId = new HardwareId({
@@ -81,7 +81,7 @@ export class AuthController {
 		res.clearCookie('accessToken');
 		res.clearCookie('refreshToken');
 
-		// await this.authService.logout(req.user?.['id'], hardwareId)
+		await this.authService.logout(req.user?.['id'], hardwareId)
 		return res.send({ message: 'Logout successful' });
 	}
 }

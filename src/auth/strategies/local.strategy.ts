@@ -25,6 +25,8 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
 		const hdi: HardwareId = this.authService.generateHdi(userAgent, ip);
         const payload: UserLoginDto = (req.body as UserLoginDto);
 
+        console.log(payload);
+
         const user: JwtTokens = await this.authService.validateUser(email, password, hdi, payload);
 
         if (!user) {
