@@ -4,11 +4,13 @@ import { CreateUserDto } from "./dto/user.dto";
 import { UserService } from "./user.service";
 import { JwtAuthGuard } from "src/guards/auth/jwt.guard";
 import { Request } from "express";
+import { EmailService, SendgridTemplate } from "src/email/email.service";
 
 @Controller('user')
 export class UserController {
     constructor(
         private readonly usersService: UserService,
+        private readonly emailService: EmailService,
     ) {}
 
 
@@ -25,6 +27,20 @@ export class UserController {
         const user: User | null = await this.usersService.fetchById(userId);
 
         return user;
+    }
+
+    @Get('/test') 
+    @UseGuards(JwtAuthGuard)
+    public async test() {
+        await this.emailService.sendTestEmail('toma.toma.constantin@gmail.com');
+    }
+
+    @Get('/register')
+    @UseGuards(JwtAuthGuard)
+    public async register() {
+        await this.emailService.sendEmailWithTemplate('toma.toma.constantin@gmail.com', SendgridTemplate.REGISTER, {
+            account_name: 'Toma Toma',
+        })
     }
 
     @Get('/all')

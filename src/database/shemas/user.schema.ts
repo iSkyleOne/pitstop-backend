@@ -2,8 +2,14 @@ import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Document, Types } from "mongoose";
 import { compare } from "bcrypt";
 import { HardwareId, HardwareIdSchema } from "./hid.schema";
+import { Role } from "src/permissions/role";
 
 export type UserDocument = User & Document;
+
+export enum UserType {
+    BUSINESS = 'business',
+    CLIENT = 'client',
+}
 
 @Schema()
 export class User {
@@ -27,10 +33,22 @@ export class User {
     @Prop({ type: [HardwareIdSchema], default: [], maxlength: 3 })
     public hids: HardwareId[] = [];
 
+    @Prop({
+        type: String,
+        enum: Object.values(UserType),
+        default: UserType.CLIENT,
+    })
+    public userType: UserType = UserType.CLIENT;
+
+    @Prop({
+        type: String,
+        enum: Object.values(Role),
+        default: Role.CLIENT,
+    })
+    public role: Role = Role.CLIENT;
+
     @Prop()
     public password: string;
-
-    
 
     public get name(): string {
         return `${this.firstName} ${this.lastName}`;
@@ -47,4 +65,3 @@ export class User {
 
 export const UserSchema = SchemaFactory.createForClass(User);
 UserSchema.loadClass(User);
-

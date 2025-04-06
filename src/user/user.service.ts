@@ -55,6 +55,25 @@ export class UserService {
         return this.userModel.findByIdAndUpdate(id, payload, { new: true });
     }
 
+    public async register(payload: Partial<CreateUserDto>): Promise<User> {
+        const user: User | null = await this.userModel.findOne({ email: payload.email });
+
+        if (user) {
+            throw new HttpException('User already exists', 409);
+        }
+
+        let password: string | null = null;
+        if (payload.password) {
+            password = MD5(payload.password).toString();
+            password = await this.hashPassword(password);
+        }
+
+        return await this.userModel.create({
+            ...payload,
+            ...(!!password && { password }),
+        });
+    }
+
     private async hashPassword(password: string): Promise<string> {
         return await bcrypt.hash(password, parseInt(this.configService.getOrThrow<string>('AUTH_SALT_ROUNDS')));
     }

@@ -6,11 +6,13 @@ import { LocalGuard } from '../guards/auth/local.guard';
 import { JwtAccesToken, JwtTokens } from '../interfaces/jwt.interface';
 import { HardwareId } from '../database/shemas/hid.schema';
 import { JwtAuthGuard } from '../guards/auth/jwt.guard';
+import { User } from 'src/database/shemas/user.schema';
 
 @Controller('auth')
 export class AuthController {
 	constructor(
 		private readonly authService: AuthService,
+		private readonly userService: UserService,
 	) {}
 
 	@Post('login')
@@ -46,7 +48,14 @@ export class AuthController {
 	@Get('user')
 	@UseGuards(JwtAuthGuard)
 	public async getCurrentUser(@Req() req: Request): Promise<any> {
-		return req.user;
+		const userId = (req.user as any)?.id;
+		const user: User | null = await this.userService.fetchById(userId);
+
+		if (!user) {
+			throw new UnauthorizedException('User not found');
+		}
+
+		return user;
 	}
 
 	@Post('logout')
