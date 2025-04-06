@@ -7,7 +7,6 @@ import { JwtTokens } from "../../interfaces/jwt.interface";
 import { UserLoginDto } from "../../user/dto/user-login.dto";
 import { HardwareId } from "../../database/shemas/hid.schema";
 
-
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
     constructor(
@@ -25,17 +24,12 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
 		const hdi: HardwareId = this.authService.generateHdi(userAgent, ip);
         const payload: UserLoginDto = (req.body as UserLoginDto);
 
-        console.log(payload);
-
         const user: JwtTokens = await this.authService.validateUser(email, password, hdi, payload);
 
         if (!user) {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        return {
-            accessToken: user.accessToken,
-            refreshToken: user.refreshToken
-        };
+        return user;
     }
 }

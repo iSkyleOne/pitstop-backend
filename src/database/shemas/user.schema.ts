@@ -30,6 +30,8 @@ export class User {
     @Prop()
     public password: string;
 
+    
+
     public get name(): string {
         return `${this.firstName} ${this.lastName}`;
     }

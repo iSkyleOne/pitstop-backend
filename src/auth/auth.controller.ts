@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Req, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Req, UnauthorizedException, UseGuards, Body } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { LocalGuard } from '../guards/auth/local.guard';
-import { JwtAccesToken } from '../interfaces/jwt.interface';
+import { JwtAccesToken, JwtTokens } from '../interfaces/jwt.interface';
 import { HardwareId } from '../database/shemas/hid.schema';
 import { JwtAuthGuard } from '../guards/auth/jwt.guard';
 
@@ -11,38 +11,23 @@ import { JwtAuthGuard } from '../guards/auth/jwt.guard';
 export class AuthController {
 	constructor(
 		private readonly authService: AuthService,
-		private readonly configService: ConfigService,
 	) {}
 
 	@Post('login')
 	@UseGuards(LocalGuard)
-	public async login(@Req() req: Request, @Res() res: Response) {
-		const token = req.user;
-
-		res.cookie('accessToken', token?.['accessToken'], {
-			httpOnly: false,
-			secure: true,
-			sameSite: 'strict',
-			maxAge: this.authService.transformToMiliseconds(this.configService.getOrThrow<string>('AUTH_EXPIRY')), // 15min
-		});
-
-		res.cookie('refreshToken', token?.['refreshToken'], {
-			httpOnly: true,
-			secure: true,
-			sameSite: 'strict',
-			maxAge: this.authService.transformToMiliseconds(this.configService.getOrThrow<string>('AUTH_REFRESH_EXPIRY')) // 4h,
-		});
-
-		return res.send({ message: 'Login successful' });
+	public async login(@Req() req: Request): Promise<JwtTokens> {
+		const tokens = req.user as JwtTokens;
+		
+		return tokens;
 	}
 
 	@Post('refresh')
-	public async refresh(@Req() req: Request, @Res() res: Response) {
-		const refreshToken: string | null = req.cookies?.['refreshToken'];
+	public async refresh(@Body() body: { refreshToken: string }, @Req() req: Request): Promise<JwtAccesToken> {
+		const refreshToken: string | null = body.refreshToken;
 		const hardwareId: HardwareId = new HardwareId({
 			ip: req.ip || req.connection.remoteAddress,
 			userAgent: req.get('User-Agent'),
-		})
+		});
 
 		if (!refreshToken) {
 			throw new UnauthorizedException('No refresh token provided');
@@ -51,14 +36,7 @@ export class AuthController {
 		try {
 			const newToken: JwtAccesToken = await this.authService.validateRefreshToken(refreshToken, hardwareId);
 
-			res.cookie('accessToken', newToken.accessToken, {
-				httpOnly: true,
-				secure: process.env.NODE_ENV === 'production',
-				sameSite: 'strict',
-				maxAge: this.authService.transformToMiliseconds(this.configService.getOrThrow<string>('AUTH_EXPIRY')), // 15min
-			});
-
-			return res.send({ message: 'Token refreshed' });
+			return newToken;
 
 		} catch (err) {
 			throw new UnauthorizedException(err.message);
@@ -67,21 +45,19 @@ export class AuthController {
 
 	@Get('user')
 	@UseGuards(JwtAuthGuard)
-	public async getCurrentUser(@Req() req: Request) {
+	public async getCurrentUser(@Req() req: Request): Promise<any> {
 		return req.user;
 	}
 
-	@Get('logout')
+	@Post('logout')
 	@UseGuards(JwtAuthGuard)
-	public async logout(@Req() req: Request, @Res() res: Response) {
+	public async logout(@Req() req: Request) {
 		const hardwareId: HardwareId = new HardwareId({
 			ip: req.ip || req.connection.remoteAddress,
 			userAgent: req.get('User-Agent'),
 		});
-		res.clearCookie('accessToken');
-		res.clearCookie('refreshToken');
 
-		await this.authService.logout(req.user?.['id'], hardwareId)
-		return res.send({ message: 'Logout successful' });
+		await this.authService.logout(req.user?.['id'], hardwareId);
+		return { message: 'Logout successful' };
 	}
 }

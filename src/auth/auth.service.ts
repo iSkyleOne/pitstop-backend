@@ -4,7 +4,7 @@ import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from 'bcrypt';
 import { HardwareId } from "../database/shemas/hid.schema";
 import { User } from "../database/shemas/user.schema";
-import { JwtAccesToken, JwtTokens } from "../interfaces/jwt.interface";
+import { JwtAccesToken, JwtPayload, JwtTokens } from "../interfaces/jwt.interface";
 import { UserLoginDto } from "../user/dto/user-login.dto";
 import { UserService } from "../user/user.service";
 
@@ -58,8 +58,8 @@ export class AuthService {
 			hids: updatedHids,
 		});
 
-		const tokenPayload = {
-			id: user._id,
+		const tokenPayload: JwtPayload = {
+			id: user._id.toString(),
 			email: user.email,
 			rememberMe: payload?.rememberMe ?? false,
 		}
@@ -79,37 +79,44 @@ export class AuthService {
 		refreshToken: string,
 		hdi: HardwareId,
 	): Promise<JwtAccesToken> {
-		const payload = await this.jwtService.verifyAsync(refreshToken, {
-			secret: this.configService.getOrThrow<string>('AUTH_KEY'),
-		});
+		try {
+			const payload = await this.jwtService.verifyAsync(refreshToken, {
+				secret: this.configService.getOrThrow<string>('AUTH_KEY'),
+			});
 
-		const user: User = await this.userService.fetchById(payload.id);
+			const user: User = await this.userService.fetchById(payload.id);
 
-		const currentHdi: HardwareId | null = user.hids.find((_hid: HardwareId) => _hid.ip === hdi.ip && _hid.userAgent === hdi.userAgent) || null;
+			const currentHdi: HardwareId | null = user.hids.find((_hid: HardwareId) => _hid.ip === hdi.ip && _hid.userAgent === hdi.userAgent) || null;
 
-		if (!currentHdi) {
-			throw new UnauthorizedException('FORBIDDEN MOVE. Login again.');
+			if (!currentHdi) {
+				throw new UnauthorizedException('FORBIDDEN MOVE. Login again.');
+			}
+
+			if (!payload.rememberMe) {
+				throw new UnauthorizedException('Remember me not set');
+			}
+
+			await this.userService.update(user._id.toString(), {
+				hids: user.hids.map((_hid: HardwareId) =>
+					_hid.ip === hdi.ip && _hid.userAgent === hdi.userAgent
+						? hdi
+						: _hid,
+				),
+			});
+
+			return {
+				accessToken: await this.jwtService.signAsync({
+					id: user._id,
+					email: user.email,
+					rememberMe: payload.rememberMe,
+				}),
+			} as JwtAccesToken;
+		} catch (error) {
+			if (error instanceof UnauthorizedException) {
+				throw error;
+			}
+			throw new UnauthorizedException('Invalid refresh token');
 		}
-
-		if (!payload.rememberMe) {
-			throw new UnauthorizedException('Remember me not set');
-		}
-
-		await this.userService.update(user._id.toString(), {
-			hids: user.hids.map((_hid: HardwareId) =>
-				_hid.ip === hdi.ip && _hid.userAgent === hdi.userAgent
-					? hdi
-					: _hid,
-			),
-		});
-
-		return {
-			accessToken: await this.jwtService.signAsync({
-				id: user._id,
-				email: user.email,
-				rememberMe: payload.rememberMe,
-			}),
-		} as JwtAccesToken;
 	}
 
 	public async logout(userId: string, hardwareId: HardwareId): Promise<void> {
@@ -118,7 +125,7 @@ export class AuthService {
 		await this.userService.update(userId, {
 			hids: user.hids.filter(
 				(_hid: HardwareId) =>
-					_hid.ip !== hardwareId.ip &&
+					_hid.ip !== hardwareId.ip ||
 					_hid.userAgent !== hardwareId.userAgent,
 			),
 		});
