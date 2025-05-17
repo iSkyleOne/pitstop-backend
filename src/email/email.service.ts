@@ -26,11 +26,12 @@ export class EmailService {
                 ...data,
             },
         };
+        console.log('Sending email with template', mail, templateId);
         await this.sendGridClient.send(mail);
     }
 }
 
 export enum SendgridTemplate {
     REGISTER = 'd-54ba383c938743adb9393ece8e0eefee',
-    FORGOT_PASSWORD = 'd-2a5f7c8d4e6b4e3b8f9d2f8c8e0f1e0',
+    RESET_PASSWORD = 'd-23472010bc3145c2aba5bb0880f413af',
 }

@@ -7,6 +7,7 @@ import { User } from "../database/shemas/user.schema";
 import { JwtAccesToken, JwtPayload, JwtTokens } from "../interfaces/jwt.interface";
 import { UserLoginDto } from "../user/dto/user-login.dto";
 import { UserService } from "../user/user.service";
+import { EmailService, SendgridTemplate } from "src/email/email.service";
 
 @Injectable()
 export class AuthService {
@@ -15,6 +16,7 @@ export class AuthService {
 	constructor(
 		private readonly jwtService: JwtService,
 		private readonly userService: UserService,
+		private readonly emailService: EmailService,
 		private readonly configService: ConfigService,
 	) {
 		this.maxConnections = this.configService.getOrThrow<number>('AUTH_MAX_CONNECTIONS');
@@ -27,10 +29,10 @@ export class AuthService {
 		hid: HardwareId,
 		payload: Partial<UserLoginDto>,
 	): Promise<JwtTokens> {
-		const user: User | null = await this.userService.fetchByEmail(email);
+		const user: User | null  = await this.userService.fetchByEmail(email);
 		
 		if (!user) {
-			throw new UnauthorizedException('User not found');
+			throw new UnauthorizedException('Invalid credentials');
 		}
 
 		if (!(await user.verifyPassword(password))) {
@@ -116,6 +118,56 @@ export class AuthService {
 				throw error;
 			}
 			throw new UnauthorizedException('Invalid refresh token');
+		}
+	}
+
+	public async requestResetPassword(email: string, port: string): Promise<void> {
+		const user: User | null = await this.userService.fetchByEmail(email);
+
+		if (!user) {
+			throw new UnauthorizedException('Utilizatorul nu a fost gasit');
+		}
+
+		try {
+			const token = await this.jwtService.signAsync({
+				id: user._id.toString(),
+				email: user.email,
+			}, {
+				expiresIn: this.configService.getOrThrow<string>('AUTH_RESET_PASSWORD_EXPIRY'),
+			});
+
+			await this.emailService.sendEmailWithTemplate(user.email, SendgridTemplate.RESET_PASSWORD, {
+				account_name: user.firstName + ' ' + user.lastName,
+				reset_url: `${this.configService.getOrThrow<string>('FRONTEND_URL')}/reset-password?userId=${user._id.toString()}&token=${token}`,
+			});
+		} catch (err) {
+			throw new UnauthorizedException('A aparaut o eroare, incearca mai tarziu.');
+		}
+	}
+
+	public async resetPassword(userId: string, token: string, password: string): Promise<void> {
+		const user: User | null = await this.userService.fetchById(userId);
+
+		if (!user) {
+			throw new UnauthorizedException('Utilizatorul nu a fost gasit');
+		}
+
+		try {
+			const payload = await this.jwtService.verifyAsync(token, {
+				secret: this.configService.getOrThrow<string>('AUTH_KEY'),
+			});
+
+			if (payload.id !== user._id.toString()) {
+				throw new UnauthorizedException('Token invalid');
+			}
+
+			const hashedPassword = await this.hashPassword(password);
+
+			await this.userService.update(user._id.toString(), {
+				password: hashedPassword,
+			});
+		} catch (err) {
+			throw new UnauthorizedException('A aparaut o eroare, incearca mai tarziu.');
 		}
 	}
 

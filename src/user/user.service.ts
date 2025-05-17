@@ -1,11 +1,12 @@
-import { HttpException, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { InjectModel } from "@nestjs/mongoose";
 import * as bcrypt from 'bcrypt';
 import { MD5 } from 'crypto-js';
-import mongoose, { Model } from "mongoose";
+import mongoose, { Model, Types } from "mongoose";
 import { User } from "../database/shemas/user.schema";
 import { CreateUserDto } from "./dto/user.dto";
+import { use } from "passport";
 
 
 @Injectable()
@@ -30,11 +31,17 @@ export class UserService {
 
 
     public async fetch(): Promise<User[]> { 
-        return this.userModel.find()
+        return this.userModel.find().lean().exec();
     }
 
     public async fetchByEmail(email: string): Promise<User | null> {
-        return this.userModel.findOne({ email });
+        const user: User | null = await this.userModel.findOne({ email }).lean().exec();
+
+        if (!user) {
+            return null;
+        }
+
+        return new User(user);
     }
 
     public async fetchById(id: string): Promise<User> {
@@ -42,24 +49,31 @@ export class UserService {
             throw new HttpException('Invalid ID', 400);
         }
 
-        const user: User | null = await this.userModel.findById(id);
+        const user: User | null = await this.userModel.findById(new Types.ObjectId(id)).lean().exec();
 
         if (!user) {
             throw new HttpException('User not found', 404);
         }
 
-        return user;
+        return new User(user);
     }
 
     public async update(id: string, payload: Partial<User>) {
-        return this.userModel.findByIdAndUpdate(id, payload, { new: true });
+        const user: User | null = await this.fetchById(id);
+        const updatedUser = await this.userModel.findByIdAndUpdate(user._id, payload, { new: true }).lean().exec();
+
+        if (!updatedUser) {
+            throw new HttpException('User not found', 404);
+        }
+        return new User(updatedUser);
     }
 
     public async register(payload: Partial<CreateUserDto>): Promise<User> {
-        const user: User | null = await this.userModel.findOne({ email: payload.email });
+        console.log('payload', payload);
+        const user: User | null = await this.fetchByEmail(payload.email!);
 
         if (user) {
-            throw new HttpException('User already exists', 409);
+            throw new HttpException('Acest email este deja folosit.', 409);
         }
 
         let password: string | null = null;
@@ -67,6 +81,8 @@ export class UserService {
             password = MD5(payload.password).toString();
             password = await this.hashPassword(password);
         }
+
+        console.log('payload', payload);
 
         return await this.userModel.create({
             ...payload,

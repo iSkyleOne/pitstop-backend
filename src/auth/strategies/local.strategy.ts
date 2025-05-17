@@ -27,7 +27,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
         const user: JwtTokens = await this.authService.validateUser(email, password, hdi, payload);
 
         if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
+            throw new UnauthorizedException('Date de autentificare invalide!');
         }
 
         return user;

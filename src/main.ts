@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule, {
@@ -31,6 +32,16 @@ async function bootstrap() {
 			'X-Requested-With'
 		  ],
 		  credentials: true,
+	});
+	const documentFactory = () => SwaggerModule.createDocument(app, 
+		new DocumentBuilder()
+		.setTitle('API Documentation')
+		.setDescription('API Documentation')
+		.setVersion('1.0')
+		.build()
+	);
+	SwaggerModule.setup('api/docs', app, documentFactory, {
+		jsonDocumentUrl: 'swagger/json',
 	});
 
 	await app.listen(port, hostname);

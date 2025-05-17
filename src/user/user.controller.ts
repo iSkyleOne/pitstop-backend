@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpException, Param, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpException, HttpStatus, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { User } from "src/database/shemas/user.schema";
 import { CreateUserDto } from "./dto/user.dto";
 import { UserService } from "./user.service";
@@ -35,12 +35,19 @@ export class UserController {
         await this.emailService.sendTestEmail('toma.toma.constantin@gmail.com');
     }
 
-    @Get('/register')
-    @UseGuards(JwtAuthGuard)
-    public async register() {
-        await this.emailService.sendEmailWithTemplate('toma.toma.constantin@gmail.com', SendgridTemplate.REGISTER, {
-            account_name: 'Toma Toma',
-        })
+    @Post('/register')
+    public async register(@Body() user: CreateUserDto): Promise<void> {
+        try {
+            await this.usersService.register(user);
+            await this.emailService.sendEmailWithTemplate(user.email, SendgridTemplate.REGISTER, {
+                account_name: user.firstName + ' ' + user.lastName,
+                account_email: user.email,
+    
+            })
+        } catch (err) {
+            console.error(err);
+            throw new HttpException(err, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @Get('/all')

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Req, UnauthorizedException, UseGuards, Body } from '@nestjs/common';
+import { Controller, Get, Post, Req, UnauthorizedException, UseGuards, Body, Param } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
@@ -6,7 +6,8 @@ import { LocalGuard } from '../guards/auth/local.guard';
 import { JwtAccesToken, JwtTokens } from '../interfaces/jwt.interface';
 import { HardwareId } from '../database/shemas/hid.schema';
 import { JwtAuthGuard } from '../guards/auth/jwt.guard';
-import { User } from 'src/database/shemas/user.schema';
+import { User } from '../database/shemas/user.schema';
+import { UserService } from '../user/user.service';
 
 @Controller('auth')
 export class AuthController {
@@ -49,16 +50,31 @@ export class AuthController {
 	@UseGuards(JwtAuthGuard)
 	public async getCurrentUser(@Req() req: Request): Promise<any> {
 		const userId = (req.user as any)?.id;
-		const user: User | null = await this.userService.fetchById(userId);
+		const user: User = await this.userService.fetchById(userId);
 
 		if (!user) {
 			throw new UnauthorizedException('User not found');
 		}
 
+		if (user.password) delete user.password;
+
 		return user;
 	}
 
-	@Post('logout')
+	@Post('request-reset-password')
+	public async requestResetPassword(@Body() body: { email: string, port: string }): Promise<void> {
+		await this.authService.requestResetPassword(body.email, body.port);
+	}
+
+	@Post('reset-password')
+	public async resetPassword(@Body('userId') userId: string, @Body('token') token: string, @Body('password') password: string): Promise<void> {
+		console.log('userId', userId);
+		console.log('token', token);
+		console.log('password', password);
+		await this.authService.resetPassword(userId, token, password);
+	}
+
+	@Get('logout')
 	@UseGuards(JwtAuthGuard)
 	public async logout(@Req() req: Request) {
 		const hardwareId: HardwareId = new HardwareId({

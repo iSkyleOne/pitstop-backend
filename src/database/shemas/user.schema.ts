@@ -48,13 +48,17 @@ export class User {
     public role: Role = Role.CLIENT;
 
     @Prop()
-    public password: string;
+    public password?: string;
 
     public get name(): string {
         return `${this.firstName} ${this.lastName}`;
     }
 
     public async verifyPassword(password: string): Promise<boolean> {
+        if (!this.password) {
+            return false;
+        }
+        
         return compare(password, this.password);
     }
 
