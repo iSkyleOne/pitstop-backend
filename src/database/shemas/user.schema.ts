@@ -30,8 +30,17 @@ export class User {
     @Prop({ default: true })
     public active: boolean = true;
 
+    @Prop()
+    public country: string;
+
+    @Prop()
+    public city: string;
+
+    @Prop()
+    public address: string;
+
     @Prop({ type: [HardwareIdSchema], default: [], maxlength: 3 })
-    public hids: HardwareId[] = [];
+    public hids?: HardwareId[] = [];
 
     @Prop({
         type: String,

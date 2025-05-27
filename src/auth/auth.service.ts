@@ -43,7 +43,7 @@ export class AuthService {
 			throw new UnauthorizedException('User is not active');
 		}
 
-		let updatedHids = [...user.hids];
+		let updatedHids = [...(user.hids ?? [])];
 
 		if (updatedHids.length >= this.maxConnections) {
 			updatedHids = updatedHids
@@ -88,7 +88,7 @@ export class AuthService {
 
 			const user: User = await this.userService.fetchById(payload.id);
 
-			const currentHdi: HardwareId | null = user.hids.find((_hid: HardwareId) => _hid.ip === hdi.ip && _hid.userAgent === hdi.userAgent) || null;
+			const currentHdi: HardwareId | null = user.hids?.find((_hid: HardwareId) => _hid.ip === hdi.ip && _hid.userAgent === hdi.userAgent) || null;
 
 			if (!currentHdi) {
 				throw new UnauthorizedException('FORBIDDEN MOVE. Login again.');
@@ -99,7 +99,7 @@ export class AuthService {
 			}
 
 			await this.userService.update(user._id.toString(), {
-				hids: user.hids.map((_hid: HardwareId) =>
+				hids: user.hids?.map((_hid: HardwareId) =>
 					_hid.ip === hdi.ip && _hid.userAgent === hdi.userAgent
 						? hdi
 						: _hid,
@@ -175,7 +175,7 @@ export class AuthService {
 		const user = await this.userService.fetchById(userId);
 
 		await this.userService.update(userId, {
-			hids: user.hids.filter(
+			hids: user.hids?.filter(
 				(_hid: HardwareId) =>
 					_hid.ip !== hardwareId.ip ||
 					_hid.userAgent !== hardwareId.userAgent,
@@ -225,7 +225,7 @@ export class AuthService {
 			this.configService.getOrThrow<string>('AUTH_HID_EXPIRY');
 		const now = new Date();
 
-		const matchingHid = user?.hids.find(
+		const matchingHid = user?.hids?.find(
 			(_hid: HardwareId) =>
 				_hid.ip === hdi.ip &&
 				_hid.userAgent === hdi.userAgent &&

@@ -46,21 +46,6 @@ export class AuthController {
 		}
 	}
 
-	@Get('user')
-	@UseGuards(JwtAuthGuard)
-	public async getCurrentUser(@Req() req: Request): Promise<any> {
-		const userId = (req.user as any)?.id;
-		const user: User = await this.userService.fetchById(userId);
-
-		if (!user) {
-			throw new UnauthorizedException('User not found');
-		}
-
-		if (user.password) delete user.password;
-
-		return user;
-	}
-
 	@Post('request-reset-password')
 	public async requestResetPassword(@Body() body: { email: string, port: string }): Promise<void> {
 		await this.authService.requestResetPassword(body.email, body.port);
