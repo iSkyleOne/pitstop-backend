@@ -29,7 +29,10 @@ export class Workstation {
         ref: 'ServiceType',
         required: true,
     })
-    public serviceType: Types.ObjectId;
+    public serviceTypeId: Types.ObjectId;
+
+    @Prop({ type: Number, required: true })
+    public slotDuration: number; // in minutes
 
     constructor(data: Partial<Workstation>) {
         Object.assign(this, data);

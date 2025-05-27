@@ -11,7 +11,7 @@ export class WorkstationService {
 
     public async findAllByServiceTypeId(serviceTypeId: string): Promise<Workstation[]> {
         return (
-            await this.workstationModel.find({ serviceTypeId: new Types.ObjectId(serviceTypeId) }).lean().exec()
+            await this.workstationModel.find({ serviceTypeId: serviceTypeId }).lean().exec()
         ).map((workstation: Workstation) => new Workstation(workstation));
     }
 

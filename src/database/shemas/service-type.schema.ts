@@ -11,6 +11,9 @@ export class ServiceType {
     @Prop({ required: true })
     public name: string;
 
+    @Prop({ required: true })
+    public estimatedDuration: number; // in minutes
+
     @Prop()
     public description?: string;
 }
